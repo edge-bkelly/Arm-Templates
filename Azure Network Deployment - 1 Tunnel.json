@@ -1,0 +1,269 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+    "vnetAddressPrefix": {
+      "type": "String",
+      "metadata": {
+        "description": "Address prefix"
+      }
+    },
+    "subnet1Prefix": {
+      "type": "String",
+      "metadata": {
+        "description": "Subnet 1 Prefix"
+      }
+    },
+    "subnet1Name": {
+      "type": "String",
+      "metadata": {
+        "description": "Subnet 1 Name"
+      }
+    },
+    "subnet2Prefix": {
+      "type": "String",
+      "metadata": {
+        "description": "Subnet 2 Prefix"
+      }
+    },
+    "subnet2Name": {
+      "type": "String",
+      "metadata": {
+        "description": "Subnet 2 Name"
+      }
+    },
+    "subnet3Prefix": {
+      "type": "String",
+      "metadata": {
+        "description": "Subnet 3 Prefix"
+      }
+    },
+    "subnet3Name": {
+      "type": "String",
+      "metadata": {
+        "description": "Subnet 3 Name"
+      }
+    },
+    "subnet4Prefix": {
+      "type": "String",
+      "metadata": {
+        "description": "Subnet 4 Prefix"
+      }
+    },
+    "subnet4Name": {
+      "type": "String",
+      "metadata": {
+        "description": "Subnet 4 Name"
+      }
+    },
+    "gatewaysubnetprefix": {
+      "type": "String",
+      "metadata": {
+        "description": "VPN Gateway prefix"
+      }
+      },
+    "azure-bgpasn": {
+      "type": "String",
+      "metadata": {
+        "description": "Azure BGP AS No"
+      }
+    },
+      "site1-name": {
+      "type": "String",
+      "metadata": {
+        "description": "Site 1 name"
+      }
+    },
+    "site1-pip": {
+      "type": "String",
+      "metadata": {
+        "description": "On Prem IP Address for VPN peer"
+      }
+    },
+    "site1-asn": {
+      "type": "String",
+      "metadata": {
+        "description": "On Prem IP Address for VPN peer"
+      }
+    },
+    "site1-bgpip": {
+      "type": "String",
+      "metadata": {
+        "description": "On Prem IP Address for BGP peer"
+      }
+    },
+    "site1-azbgpip": {
+      "type": "String",
+      "metadata": {
+        "description": "On Prem IP Address for BGP peer"
+      }
+    },
+    "site1-psk": {
+      "type": "String",
+      "metadata": {
+        "description": "Pre-shared key for con1"
+      }
+    },
+    "location": {
+      "type": "String",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources."
+      }
+    }
+  },
+    "functions": [],
+    "variables": {
+        "vnetname": "EDGE-CLOUDSUITE",
+        "gwpipname": "GW-PIP",
+        "lg1name": "[concat('LG1-',parameters('site1-name'))]",
+        "vpngwname": "VPN-GW",
+        "gatewaysubnetname": "GatewaySubnet",
+        "gatewaysku": "vpngw1",
+        "conn1name": "[concat('VPN-',parameters('site1-name'))]"
+    },
+    "resources": [
+        {
+        "name": "[variables('vnetName')]",
+        "type": "Microsoft.Network/virtualNetworks",
+        "apiVersion": "2019-11-01",
+        "location": "[parameters('location')]",
+        "tags": {
+            "displayName": "[variables('vnetname')]"
+        },
+        "properties": {
+            "addressSpace": {
+                "addressPrefixes": [
+                    "[parameters('vnetAddressPrefix')]"
+                ]
+            },
+            "subnets": [
+                {
+                    "name": "[parameters('subnet1Name')]",
+                    "properties": {
+                        "addressPrefix": "[parameters('subnet1Prefix')]"
+                    }
+                },
+                {
+                    "name": "[parameters('subnet2Name')]",
+                    "properties": {
+                        "addressPrefix": "[parameters('subnet2Prefix')]"
+                    }
+                },
+                {
+                    "name": "[parameters('subnet3Name')]",
+                    "properties": {
+                        "addressPrefix": "[parameters('subnet3Prefix')]"
+                    }
+                },
+                {
+                    "name": "[parameters('subnet4Name')]",
+                    "properties": {
+                        "addressPrefix": "[parameters('subnet4Prefix')]"
+                    }
+                },
+                {
+                
+                    "name": "[variables('gatewaysubnetname')]",
+                    "properties": {
+                        "addressPrefix": "[parameters('gatewaysubnetprefix')]"
+                    }
+                }
+            ]
+        }
+    },
+        {
+            "name": "[variables('gwpipname')]",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2019-11-01",
+            "location": "[parameters('location')]",
+            "tags": {
+                "displayName": "[variables('gwpipname')]"
+            },
+            "properties": {
+                "publicIPAllocationMethod": "dynamic"
+                }
+        },
+{
+    "name": "[variables('lg1name')]",
+    "type": "Microsoft.Network/localNetworkGateways",
+    "apiVersion": "2019-11-01",
+    "location": "[resourceGroup().location]",
+    "properties": {
+        "localNetworkAddressSpace": {
+            "addressPrefixes": [
+                "[concat(parameters('site1-bgpip'), '/32')]"
+            ]
+        },
+        "bgpSettings": {
+      "asn": "[parameters('site1-asn')]",
+      "bgpPeeringAddress": "[parameters('site1-bgpip')]",
+      "peerWeight": 100
+    },
+        "gatewayIpAddress": "[parameters('site1-pip')]"
+    }
+},
+    {
+        "name": "[variables('vpngwname')]",
+        "type": "Microsoft.Network/virtualNetworkGateways",
+        "apiVersion": "2019-11-01",
+        "location": "[resourceGroup().location]",
+        "dependsOn": [
+            "[resourceId('Microsoft.Network/publicIPAddresses', variables('gwpipname'))]",
+            "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetname'))]"
+        ],
+        "properties": {
+            "ipConfigurations": [
+                {
+                    "name": "vnetGatewayConfig",
+                    "properties": {
+                        "privateIPAllocationMethod": "dynamic",
+                        "subnet": {
+                            "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetname'), variables('gatewaysubnetname'))]"
+                        },
+                        "publicIPAddress": {
+                            "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('gwpipname'))]"
+                        }
+                    }
+                }
+            ],
+            "sku": {
+                "name": "[variables('gatewaysku')]",
+                "tier": "[variables('gatewaysku')]"
+            },
+            "gatewayType": "Vpn",
+            "vpnType": "RouteBased",
+            "enableBgp": true,
+            "bgpSettings": {
+      "asn": "[parameters('azure-bgpasn')]",
+      "bgpPeeringAddress": "[parameters('site1-azbgpip')]",
+      "peerWeight": 100
+    }
+        }
+    },
+    {
+        "name": "[variables('conn1name')]",
+        "type": "Microsoft.Network/connections",
+        "apiVersion": "2019-11-01",
+        "location": "[resourceGroup().location]",
+        "dependsOn": [
+            "[resourceId('Microsoft.Network/virtualNetworkGateways', variables('vpngwname'))]",
+            "[resourceId('Microsoft.Network/localNetworkGateways', variables('lg1name'))]"
+        ],
+        "properties": {
+            "virtualNetworkGateway1": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworkGateways', variables('vpngwname'))]"
+            },
+            "localNetworkGateway2": {
+                "id": "[resourceId('Microsoft.Network/localNetworkGateways', variables('lg1name'))]"
+            },
+            "connectionType": "IPsec",
+            "routingWeight": 0,
+            "sharedKey": "[parameters('site1-psk')]",
+            "enableBgp": true
+        }
+    }
+  
+    ],
+    "outputs": {}
+}
