@@ -1,0 +1,39 @@
+
+
+crypto ikev2 keyring {{ site1short }}-IKEV2-KEYRING
+ peer AZURE-CLOUDSUITE
+  address 51.140.69.229
+  pre-shared-key {{ psk }}
+
+
+
+crypto ikev2 profile {{ site1short }}-IKEV2-PROFILE
+ match address local {{ site1pip }}
+ match identity remote address {{ azurepip }} 255.255.255.255 
+ authentication remote pre-share
+ authentication local pre-share
+ keyring local {{ site1short }}-IKEV2-KEYRING
+ ivrf {{ vrf }}
+ 
+ crypto ipsec profile {{ site1short }}-AZURE-PROFILE
+ set transform-set ESP-AES-256-SHA-256 
+ set ikev2-profile {{ site1short }}-IKEV2-PROFILE
+ 
+ interface tunnel{{ tunnel }}
+ description {{ site1short }} AZURE VPN
+ vrf forwarding {{ vrf }}
+ ip address {{ site1bgp }} 255.255.255.0
+ ip tcp adjust-mss 1350
+ tunnel source {{ site1pip }}
+ tunnel mode ipsec ipv4
+ tunnel destination {{ azurepip }}
+ tunnel protection ipsec profile {{ site1short }}-AZURE-PROFILE
+ 
+ router bgp {{ localas }} 
+ address-family ipv4 vrf {{ vrf }}
+ neighbor {{ azbgpip }} remote-as {{ azbgpas }}
+
+ip route vrf {{ vrf }} {{ azbgpip }} 255.255.255.255 interface tunnel{{ tunnel }} description "{{ site1short }} AZURE BGP Peer"
+ 
+ 
+ 
